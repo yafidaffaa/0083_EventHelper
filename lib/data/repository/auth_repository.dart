@@ -39,7 +39,7 @@ class AuthRepository {
         if (loginResponse.user?.roleId != null) {
           await secureStorage.write(
             key: 'userRole',
-            value: loginResponse.user!.roleId.toString(), // karena integer
+            value: loginResponse.user!.roleId.toString(),
           );
         }
 
