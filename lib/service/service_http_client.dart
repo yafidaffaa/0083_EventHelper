@@ -70,5 +70,104 @@ class ServiceHttpClient {
   }
 
   //PUT
+  Future<http.Response> put(String endpoint, Map<String, dynamic> body) async {
+    final token = await secureStorage.read(key: 'authToken');
+    final url = Uri.parse('$baseUrl$endpoint');
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+      return response;
+    } catch (e) {
+      throw Exception('PUT request failed: $e');
+    }
+  }
+
   //DELETE
+  Future<http.Response> delete(String endpoint) async {
+    final token = await secureStorage.read(key: 'authToken');
+    final url = Uri.parse('$baseUrl$endpoint');
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      );
+      return response;
+    } catch (e) {
+      throw Exception('DELETE request failed: $e');
+    }
+  }
+
+  Future<http.Response> getWithToken(String endpoint) async {
+    final token = await secureStorage.read(key: 'authToken');
+    final url = Uri.parse('$baseUrl$endpoint');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      );
+      return response;
+    } catch (e) {
+      throw Exception('GET with token failed: $e');
+    }
+  }
+
+  Future<http.Response> deleteWithToken(String endpoint) async {
+    final token = await secureStorage.read(key: 'authToken');
+    final url = Uri.parse('$baseUrl$endpoint');
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      );
+      return response;
+    } catch (e) {
+      throw Exception('DELETE with token failed: $e');
+    }
+  }
+
+  Future<http.Response> putWithToken(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    final token = await secureStorage.read(key: 'authToken');
+    final url = Uri.parse('$baseUrl$endpoint');
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+      return response;
+    } catch (e) {
+      throw Exception('PUT request failed: $e');
+    }
+  }
 }
