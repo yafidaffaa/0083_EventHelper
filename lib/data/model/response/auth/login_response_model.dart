@@ -31,7 +31,7 @@ class User {
   final String? username;
   final String? email;
   final int? roleId;
-  final String? token; // opsional, jika token disisipkan ke user
+  final String? token;
 
   User({this.id, this.username, this.email, this.roleId, this.token});
 
@@ -40,7 +40,7 @@ class User {
     username: json["username"],
     email: json["email"],
     roleId: json["role_id"],
-    token: json["token"], // hanya jika token ada di sini
+    token: json["token"],
   );
 
   Map<String, dynamic> toMap() => {
