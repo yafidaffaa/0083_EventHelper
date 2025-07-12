@@ -1,4 +1,12 @@
 part of 'home_bloc.dart';
 
-@immutable
-sealed class HomeEvent {}
+sealed class MahasiswaHomeEvent {}
+
+class LoadAllEvent extends MahasiswaHomeEvent {}
+
+class LoadEventYangDiikuti extends MahasiswaHomeEvent {}
+
+class DaftarEvent extends MahasiswaHomeEvent {
+  final EventMahasiswaRequestModel request;
+  DaftarEvent(this.request);
+}
