@@ -2,7 +2,6 @@ import 'package:bloc/bloc.dart';
 import 'package:eventhelper_fe/data/model/request/auth/login_request_model.dart';
 import 'package:eventhelper_fe/data/model/response/auth/login_response_model.dart';
 import 'package:eventhelper_fe/data/repository/auth_repository.dart';
-import 'package:meta/meta.dart';
 
 part 'login_event.dart';
 part 'login_state.dart';
