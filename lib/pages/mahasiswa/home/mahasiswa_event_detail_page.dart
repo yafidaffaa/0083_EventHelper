@@ -1,14 +1,21 @@
 import 'dart:convert';
 import 'package:eventhelper_fe/data/model/response/organisasi/event_response_model.dart';
 import 'package:eventhelper_fe/data/model/request/mahasiswa/event_mahasiswa_request_model.dart';
+import 'package:eventhelper_fe/data/database/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:eventhelper_fe/pages/mahasiswa/bloc/home/home_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MahasiswaEventDetailPage extends StatefulWidget {
   final EventData event;
+  final bool isRegistered;
 
-  const MahasiswaEventDetailPage({super.key, required this.event});
+  const MahasiswaEventDetailPage({
+    super.key,
+    required this.event,
+    this.isRegistered = false,
+  });
 
   @override
   State<MahasiswaEventDetailPage> createState() =>
@@ -20,6 +27,13 @@ class _MahasiswaEventDetailPageState extends State<MahasiswaEventDetailPage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
+
+  // Database helper dan state untuk like
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
+  bool _isLiked = false;
+  int _totalLikeCount = 0;
+  bool _isLoadingLike = false;
+  String? _currentUserId;
 
   @override
   void initState() {
@@ -37,6 +51,9 @@ class _MahasiswaEventDetailPageState extends State<MahasiswaEventDetailPage>
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
     );
 
+    // Initialize user data and load like status
+    _initializeUserData();
+
     // Start animation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _animationController.forward();
@@ -47,6 +64,128 @@ class _MahasiswaEventDetailPageState extends State<MahasiswaEventDetailPage>
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  // Initialize user data dari SharedPreferences
+  Future<void> _initializeUserData() async {
+    try {
+      _currentUserId = await _getCurrentUserId();
+      if (_currentUserId != null) {
+        await _loadLikeStatus();
+      } else {
+        // Handle case ketika user belum login
+        print('User ID tidak ditemukan di SharedPreferences');
+        if (mounted) {
+          setState(() {
+            _isLiked = false;
+            _totalLikeCount = 0;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error initializing user data: $e');
+    }
+  }
+
+  // Get current user ID dari SharedPreferences
+  Future<String?> _getCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_id');
+  }
+
+  // Load status like dari database berdasarkan user ID
+  Future<void> _loadLikeStatus() async {
+    if (_currentUserId == null) return;
+
+    try {
+      final isLiked = await _databaseHelper.isEventLiked(
+        widget.event.id,
+        _currentUserId!,
+      );
+      final totalLikeCount = await _databaseHelper.getTotalLikeCount(
+        widget.event.id,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isLiked = isLiked;
+          _totalLikeCount = totalLikeCount;
+        });
+      }
+    } catch (e) {
+      print('Error loading like status: $e');
+    }
+  }
+
+  // Toggle like status dengan user ID
+  Future<void> _toggleLike() async {
+    if (_isLoadingLike || _currentUserId == null) return;
+
+    setState(() {
+      _isLoadingLike = true;
+    });
+
+    try {
+      await _databaseHelper.toggleLike(widget.event.id, _currentUserId!);
+      await _loadLikeStatus(); // Reload status setelah toggle
+
+      // Tampilkan feedback kepada user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isLiked
+                  ? "Event ditambahkan ke favorit ❤️"
+                  : "Event dihapus dari favorit",
+            ),
+            backgroundColor: _isLiked ? Colors.green : Colors.red,
+            duration: const Duration(seconds: 1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error toggling like: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Gagal mengubah status favorit"),
+            backgroundColor: Colors.red,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLike = false;
+        });
+      }
+    }
+  }
+
+  // Handle like button press dengan validasi user login
+  void _handleLikePress() {
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Silakan login terlebih dahulu"),
+          backgroundColor: Colors.orange,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    _toggleLike();
   }
 
   void _showAlasanDialog(BuildContext context) {
@@ -158,6 +297,75 @@ class _MahasiswaEventDetailPageState extends State<MahasiswaEventDetailPage>
                   ),
                   child: const Text(
                     "Daftar",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showRegisteredDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  "Sudah Terdaftar",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D3748),
+                  ),
+                ),
+              ],
+            ),
+            content: const Text(
+              "Anda sudah terdaftar di event ini. Silakan cek status pendaftaran di halaman profile.",
+              style: TextStyle(fontSize: 14, color: Color(0xFF4A5568)),
+            ),
+            actions: [
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "OK",
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -289,6 +497,42 @@ class _MahasiswaEventDetailPageState extends State<MahasiswaEventDetailPage>
                   ),
                 ),
 
+                // Like Button
+                Positioned(
+                  top: 60,
+                  right: 20,
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        onPressed: _isLoadingLike ? null : _handleLikePress,
+                        icon:
+                            _isLoadingLike
+                                ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                                : Icon(
+                                  _isLiked
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: _isLiked ? Colors.red : Colors.white,
+                                ),
+                      ),
+                    ),
+                  ),
+                ),
+
                 // Event Image or Icon
                 Center(
                   child: FadeTransition(
@@ -345,12 +589,38 @@ class _MahasiswaEventDetailPageState extends State<MahasiswaEventDetailPage>
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Detail Event',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Detail Event',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                            if (_totalLikeCount > 0) ...[
+                              const SizedBox(width: 16),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.favorite,
+                                    size: 16,
+                                    color: Colors.red,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _totalLikeCount.toString(),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
@@ -379,6 +649,63 @@ class _MahasiswaEventDetailPageState extends State<MahasiswaEventDetailPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 20),
+
+                      // Registration Status Badge (jika sudah terdaftar)
+                      if (widget.isRegistered)
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 600),
+                          builder: (context, value, child) {
+                            return Transform.translate(
+                              offset: Offset(0, 20 * (1 - value)),
+                              child: Opacity(
+                                opacity: value,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  margin: const EdgeInsets.only(bottom: 24),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Colors.green.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.check_circle,
+                                          color: Colors.green,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Expanded(
+                                        child: Text(
+                                          'Anda sudah terdaftar di event ini',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
 
                       // Event Information Title
                       FadeTransition(
@@ -525,27 +852,40 @@ class _MahasiswaEventDetailPageState extends State<MahasiswaEventDetailPage>
                                 height: 56,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF667eea),
-                                      Color(0xFF764ba2),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFF667eea,
-                                      ).withOpacity(0.3),
-                                      spreadRadius: 1,
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
+                                  gradient:
+                                      widget.isRegistered
+                                          ? null
+                                          : const LinearGradient(
+                                            colors: [
+                                              Color(0xFF667eea),
+                                              Color(0xFF764ba2),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                  color:
+                                      widget.isRegistered
+                                          ? Colors.grey[300]
+                                          : null,
+                                  boxShadow:
+                                      widget.isRegistered
+                                          ? null
+                                          : [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF667eea,
+                                              ).withOpacity(0.3),
+                                              spreadRadius: 1,
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
                                 ),
                                 child: ElevatedButton.icon(
-                                  onPressed: () => _showAlasanDialog(context),
+                                  onPressed:
+                                      widget.isRegistered
+                                          ? _showRegisteredDialog
+                                          : () => _showAlasanDialog(context),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,
                                     shadowColor: Colors.transparent,
@@ -553,14 +893,24 @@ class _MahasiswaEventDetailPageState extends State<MahasiswaEventDetailPage>
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                   ),
-                                  icon: const Icon(
-                                    Icons.how_to_reg,
-                                    color: Colors.white,
+                                  icon: Icon(
+                                    widget.isRegistered
+                                        ? Icons.check_circle
+                                        : Icons.how_to_reg,
+                                    color:
+                                        widget.isRegistered
+                                            ? Colors.grey[600]
+                                            : Colors.white,
                                   ),
-                                  label: const Text(
-                                    "Daftar Event Ini",
+                                  label: Text(
+                                    widget.isRegistered
+                                        ? "Sudah Terdaftar"
+                                        : "Daftar Event Ini",
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color:
+                                          widget.isRegistered
+                                              ? Colors.grey[600]
+                                              : Colors.white,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                     ),
