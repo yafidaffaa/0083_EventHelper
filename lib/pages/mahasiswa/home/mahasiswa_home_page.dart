@@ -52,6 +52,7 @@ class _MahasiswaHomePageState extends State<MahasiswaHomePage>
   }
 
   void _loadEvents() {
+    context.read<MahasiswaHomeBloc>().add(LoadMahasiswaProfileHome());
     context.read<MahasiswaHomeBloc>().add(LoadAllEvent());
     context.read<MahasiswaHomeBloc>().add(LoadEventYangDiikuti());
   }
