@@ -12,6 +12,7 @@ import 'package:eventhelper_fe/pages/organisasi/home/organisasi_home_page.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 String getRoleFromId(int? roleId) {
   switch (roleId) {
@@ -77,6 +78,25 @@ class _LoginScreenState extends State<LoginScreen>
     _key.currentState?.dispose();
     _animationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveUserData(dynamic user) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString('user_id', user.id.toString());
+    await prefs.setString('user_email', user.email ?? '');
+    await prefs.setString('user_token', user.token ?? '');
+
+    print('User data saved to SharedPreferences: ${user.id}');
+  }
+
+  Future<void> _clearUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_id');
+    await prefs.remove('user_email');
+    await prefs.remove('user_name');
+    await prefs.remove('user_role');
+    await prefs.remove('user_token');
   }
 
   @override
@@ -361,7 +381,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                         const SizedBox(height: 32),
 
-                        // Login Button
+                        // Login Button - BAGIAN INI YANG DIMODIFIKASI
                         BlocConsumer<LoginBloc, LoginState>(
                           listener: (context, state) {
                             if (state is LoginFailure) {
@@ -376,6 +396,9 @@ class _LoginScreenState extends State<LoginScreen>
                                 ),
                               );
                             } else if (state is LoginSuccess) {
+                              // TAMBAHKAN PENYIMPANAN USER DATA DI SINI
+                              _saveUserData(state.responseModel.user);
+
                               final role =
                                   getRoleFromId(
                                     state.responseModel.user?.roleId,
