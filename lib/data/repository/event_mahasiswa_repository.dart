@@ -123,4 +123,9 @@ class EventMahasiswaRepository {
       return Left('Terjadi kesalahan: $e');
     }
   }
+
+  Future<Either<String, MahasiswaProfileResponseModel>>
+  fetchMahasiswaProfileForHome() async {
+    return await getProfile();
+  }
 }
