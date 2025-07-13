@@ -209,7 +209,11 @@ class _PendaftarListPageState extends State<PendaftarListPage>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildDetailItem('NIM', pendaftar.nim, Icons.badge),
+                  _buildDetailItem(
+                    'User ID',
+                    pendaftar.userId.toString(),
+                    Icons.badge,
+                  ),
                   if (pendaftar.prodi != null)
                     _buildDetailItem('Prodi', pendaftar.prodi!, Icons.school),
                   if (pendaftar.fakultas != null)
@@ -711,7 +715,7 @@ class _PendaftarListPageState extends State<PendaftarListPage>
                                             children: [
                                               const SizedBox(height: 4),
                                               Text(
-                                                'NIM: ${p.nim}',
+                                                'User ID: ${p.userId}',
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.grey[600],
