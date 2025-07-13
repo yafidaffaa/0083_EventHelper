@@ -2,6 +2,8 @@ part of 'home_bloc.dart';
 
 sealed class MahasiswaHomeEvent {}
 
+class LoadMahasiswaProfileHome extends MahasiswaHomeEvent {}
+
 class LoadAllEvent extends MahasiswaHomeEvent {}
 
 class LoadEventYangDiikuti extends MahasiswaHomeEvent {}

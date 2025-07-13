@@ -6,6 +6,11 @@ class MahasiswaHomeInitial extends MahasiswaHomeState {}
 
 class MahasiswaHomeLoading extends MahasiswaHomeState {}
 
+class MahasiswaProfileHomeLoaded extends MahasiswaHomeState {
+  final MahasiswaProfileResponseModel profile;
+  MahasiswaProfileHomeLoaded(this.profile);
+}
+
 class MahasiswaAllEventListLoaded extends MahasiswaHomeState {
   final List<EventData> eventList;
   MahasiswaAllEventListLoaded(this.eventList);

@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:eventhelper_fe/data/model/request/mahasiswa/event_mahasiswa_request_model.dart';
 import 'package:eventhelper_fe/data/model/response/mahasiswa/event_mahasiswa_response_model.dart';
+import 'package:eventhelper_fe/data/model/response/mahasiswa/profile_response_model.dart';
 import 'package:eventhelper_fe/data/model/response/organisasi/event_response_model.dart';
 import 'package:eventhelper_fe/data/repository/event_mahasiswa_repository.dart';
 
@@ -11,6 +12,15 @@ class MahasiswaHomeBloc extends Bloc<MahasiswaHomeEvent, MahasiswaHomeState> {
   final EventMahasiswaRepository mahasiswaRepository;
 
   MahasiswaHomeBloc(this.mahasiswaRepository) : super(MahasiswaHomeInitial()) {
+    on<LoadMahasiswaProfileHome>((event, emit) async {
+      emit(MahasiswaHomeLoading());
+      final result = await mahasiswaRepository.fetchMahasiswaProfileForHome();
+      result.fold(
+        (e) => emit(MahasiswaHomeFailure(e)),
+        (profile) => emit(MahasiswaProfileHomeLoaded(profile)),
+      );
+    });
+
     on<LoadEventYangDiikuti>((event, emit) async {
       emit(MahasiswaHomeLoading());
       final result = await mahasiswaRepository.fetchMyRegistrations();
