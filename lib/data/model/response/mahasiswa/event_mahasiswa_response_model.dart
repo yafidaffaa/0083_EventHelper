@@ -26,7 +26,7 @@ class EventMahasiswaResponseModel {
       alasan: json['alasan'],
       event:
           json['event'] != null
-              ? EventResponseModel.fromJson(json['event'])
+              ? EventResponseModel.fromMap(json['event'])
               : null,
     );
   }
