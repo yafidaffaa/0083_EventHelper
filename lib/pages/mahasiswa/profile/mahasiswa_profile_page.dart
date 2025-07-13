@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:eventhelper_fe/pages/mahasiswa/bloc/profile/profile_bloc.dart';
 import 'package:eventhelper_fe/pages/mahasiswa/home/mahasiswa_home_page.dart';
+import 'package:intl/intl.dart';
 
 class MahasiswaProfilePage extends StatefulWidget {
-  const MahasiswaProfilePage({Key? key}) : super(key: key);
+  const MahasiswaProfilePage({super.key});
 
   @override
   State<MahasiswaProfilePage> createState() => _MahasiswaProfilePageState();
@@ -12,7 +13,7 @@ class MahasiswaProfilePage extends StatefulWidget {
 
 class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
     with TickerProviderStateMixin {
-  int _selectedIndex = 1;
+  int _currentIndex = 1;
   late AnimationController _animationController;
   late Animation<double> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -20,8 +21,7 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
   @override
   void initState() {
     super.initState();
-    
-    // Animation setup
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -35,7 +35,6 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
 
     context.read<MahasiswaProfileBloc>().add(LoadMahasiswaProfile());
 
-    // Start animation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _animationController.forward();
     });
@@ -47,7 +46,7 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
     super.dispose();
   }
 
-  void _onItemTapped(int index) {
+  void _onTabTapped(int index) {
     if (index == 0) {
       Navigator.pushReplacement(
         context,
@@ -58,6 +57,58 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
 
   void _logout() {
     context.read<MahasiswaProfileBloc>().add(LogoutMahasiswa());
+  }
+
+  void _goToEdit(dynamic profile) {
+    Navigator.pushNamed(
+      context,
+      '/mahasiswa/profile/edit',
+      arguments: profile,
+    ).then((_) {
+      context.read<MahasiswaProfileBloc>().add(LoadMahasiswaProfile());
+    });
+  }
+
+  bool _isProfileIncomplete(dynamic profile) {
+    return profile == null ||
+        (profile.nama ?? '').isEmpty ||
+        (profile.nim ?? '').isEmpty ||
+        (profile.prodi ?? '').isEmpty ||
+        (profile.angkatan ?? '').isEmpty;
+  }
+
+  // Fungsi untuk navigasi ke halaman edit dengan data kosong
+  void _goToCreateProfile() {
+    Navigator.pushNamed(
+      context,
+      '/mahasiswa/profile/edit',
+      arguments: {
+        'id': 0,
+        'userId': 0,
+        'nama': '',
+        'nim': '',
+        'prodi': '',
+        'angkatan': '',
+        'createdAt': DateTime.now(),
+        'updatedAt': DateTime.now(),
+      },
+    ).then((_) {
+      // Reload profile setelah kembali dari edit
+      context.read<MahasiswaProfileBloc>().add(LoadMahasiswaProfile());
+    });
+  }
+
+  // Fungsi untuk mengecek apakah error menunjukkan profile kosong/tidak lengkap
+  bool _isProfileEmptyError(String error) {
+    final errorLower = error.toLowerCase();
+    return errorLower.contains('tidak tersedia') ||
+        errorLower.contains('belum tersedia') ||
+        errorLower.contains('tidak ditemukan') ||
+        errorLower.contains('not found') ||
+        errorLower.contains('belum lengkap') ||
+        errorLower.contains('kosong') ||
+        errorLower.contains('empty') ||
+        errorLower.contains('null');
   }
 
   Widget _buildProfileCard(dynamic profile) {
@@ -88,7 +139,6 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Profile Header
                     Row(
                       children: [
                         Container(
@@ -109,11 +159,16 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                profile.nama,
-                                style: const TextStyle(
+                                (profile?.nama?.isNotEmpty ?? false)
+                                    ? profile.nama
+                                    : 'Nama belum diisi',
+                                style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2D3748),
+                                  color:
+                                      (profile?.nama?.isEmpty ?? true)
+                                          ? Colors.grey[600]
+                                          : const Color(0xFF2D3748),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -129,31 +184,36 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Profile Details
                     _buildInfoRow(
                       icon: Icons.badge,
                       label: 'Nomor Induk Mahasiswa',
-                      value: profile.nim,
+                      value: profile?.nim ?? 'Belum diisi',
                     ),
                     const SizedBox(height: 16),
                     _buildInfoRow(
                       icon: Icons.school,
                       label: 'Program Studi',
-                      value: profile.prodi,
+                      value: profile?.prodi ?? 'Belum diisi',
+                    ),
+                    const SizedBox(height: 16),
+                    _buildInfoRow(
+                      icon: Icons.date_range,
+                      label: 'Angkatan',
+                      value: profile?.angkatan ?? 'Belum diisi',
                     ),
                     const SizedBox(height: 16),
                     _buildInfoRow(
                       icon: Icons.calendar_today,
-                      label: 'Angkatan',
-                      value: profile.angkatan,
+                      label: 'Bergabung sejak',
+                      value:
+                          profile?.createdAt != null
+                              ? DateFormat(
+                                'dd MMM yyyy',
+                              ).format(profile.createdAt.toLocal())
+                              : 'Belum diisi',
                     ),
-
                     const SizedBox(height: 32),
-
-                    // Action Buttons
                     Row(
                       children: [
                         Expanded(
@@ -167,12 +227,10 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
                               ),
                             ),
                             child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.pushNamed(context, '/mahasiswa/profile/edit');
-                              },
+                              onPressed: () => _goToEdit(profile),
                               icon: const Icon(Icons.edit, color: Colors.white),
                               label: const Text(
-                                'Ubah Profil',
+                                'Edit Profil',
                                 style: TextStyle(color: Colors.white),
                               ),
                               style: ElevatedButton.styleFrom(
@@ -220,15 +278,22 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
     required String label,
     required String value,
   }) {
+    final isEmpty = value == 'Belum diisi' || value.isEmpty;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
+        border:
+            isEmpty ? Border.all(color: Colors.orange.withOpacity(0.3)) : null,
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: const Color(0xFF667eea)),
+          Icon(
+            icon,
+            size: 20,
+            color: isEmpty ? Colors.orange[600] : const Color(0xFF667eea),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -245,10 +310,12 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
                 const SizedBox(height: 4),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF2D3748),
+                    color:
+                        isEmpty ? Colors.orange[600] : const Color(0xFF2D3748),
                     fontWeight: FontWeight.w600,
+                    fontStyle: isEmpty ? FontStyle.italic : FontStyle.normal,
                   ),
                 ),
               ],
@@ -300,7 +367,6 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
       backgroundColor: Colors.grey[50],
       body: Column(
         children: [
-          // Header Section with Gradient
           Container(
             height: MediaQuery.of(context).size.height * 0.25,
             width: double.infinity,
@@ -317,7 +383,6 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(height: 60),
-                  // Profile Icon Section
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -352,76 +417,62 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
               ),
             ),
           ),
-
-          // Content Section
           Expanded(
             child: Transform.translate(
               offset: const Offset(0, -20),
-              child: BlocListener<MahasiswaProfileBloc, MahasiswaProfileState>(
+              child: BlocConsumer<MahasiswaProfileBloc, MahasiswaProfileState>(
                 listener: (context, state) {
                   if (state is MahasiswaLogoutSuccess) {
                     Navigator.pushNamedAndRemoveUntil(
                       context,
                       '/login',
-                      (route) => false,
+                      (_) => false,
                     );
-                  }
-                },
-                child: BlocBuilder<MahasiswaProfileBloc, MahasiswaProfileState>(
-                  builder: (context, state) {
-                    if (state is MahasiswaProfileLoading) {
-                      return _buildLoadingState();
-                    } else if (state is MahasiswaProfileLoaded) {
-                      final profile = state.profile;
-                      return SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.only(top: 8, bottom: 20),
-                        child: _buildProfileCard(profile),
-                      );
-                    } else if (state is MahasiswaProfileFailure) {
-                      return Transform.translate(
-                        offset: const Offset(0, -20),
-                        child: Container(
-                          margin: const EdgeInsets.all(20),
-                          padding: const EdgeInsets.all(40),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
-                                spreadRadius: 1,
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
+                  } else if (state is MahasiswaProfileFailure) {
+                    // Cek apakah error menunjukkan profile kosong/tidak lengkap
+                    if (_isProfileEmptyError(state.error)) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _goToCreateProfile();
+                      });
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Gagal: ${state.error}'),
+                          backgroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                size: 48,
-                                color: Colors.red,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                state.error,
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 16,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
+                          behavior: SnackBarBehavior.floating,
                         ),
                       );
                     }
-
+                  } else if (state is MahasiswaProfileLoaded) {
+                    // Jika profile berhasil dimuat tapi datanya tidak lengkap
+                    if (_isProfileIncomplete(state.profile)) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _goToCreateProfile();
+                      });
+                    }
+                  }
+                },
+                builder: (context, state) {
+                  if (state is MahasiswaProfileLoading) {
                     return _buildLoadingState();
-                  },
-                ),
+                  }
+
+                  if (state is MahasiswaProfileLoaded &&
+                      !_isProfileIncomplete(state.profile)) {
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(top: 8, bottom: 20),
+                      child: _buildProfileCard(state.profile),
+                    );
+                  }
+
+                  // Jika state adalah failure atau profile incomplete, tampilkan loading
+                  // karena akan di-redirect ke halaman edit
+                  return _buildLoadingState();
+                },
               ),
             ),
           ),
@@ -440,16 +491,16 @@ class _MahasiswaProfilePageState extends State<MahasiswaProfilePage>
           ],
         ),
         child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
+          currentIndex: _currentIndex,
+          onTap: _onTabTapped,
           backgroundColor: Colors.transparent,
           elevation: 0,
           selectedItemColor: const Color(0xFF667eea),
           unselectedItemColor: Colors.grey[600],
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.event), label: "Home"),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
+            BottomNavigationBarItem(icon: Icon(Icons.event), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
       ),
