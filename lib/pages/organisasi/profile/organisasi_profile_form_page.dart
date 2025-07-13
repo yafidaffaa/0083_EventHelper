@@ -1,6 +1,7 @@
 import 'package:eventhelper_fe/data/model/request/organisasi/profile_request_model.dart';
 import 'package:eventhelper_fe/data/model/response/organisasi/profile_response_model.dart';
 import 'package:eventhelper_fe/pages/organisasi/bloc/profile/profile_bloc.dart';
+import 'package:eventhelper_fe/pages/organisasi/profile/organisasi_profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -344,7 +345,20 @@ class _OrganisasiProfileFormPageState extends State<OrganisasiProfileFormPage>
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: IconButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () {
+                              if (Navigator.canPop(context)) {
+                                Navigator.pop(context);
+                              } else {
+                                // Arahkan manual ke halaman awal
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => const OrganisasiProfilePage(),
+                                  ),
+                                );
+                              }
+                            },
                             icon: const Icon(
                               Icons.arrow_back,
                               color: Colors.white,
@@ -408,7 +422,14 @@ class _OrganisasiProfileFormPageState extends State<OrganisasiProfileFormPage>
                       ),
                     );
                     Future.delayed(const Duration(milliseconds: 500), () {
-                      if (mounted) Navigator.pop(context);
+                      if (mounted) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const OrganisasiProfilePage(),
+                          ),
+                        );
+                      }
                     });
                   } else if (state is ProfileFailure && _isSubmitted) {
                     ScaffoldMessenger.of(context).showSnackBar(
