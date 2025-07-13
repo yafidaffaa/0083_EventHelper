@@ -70,6 +70,27 @@ class _RegisterScreenState extends State<RegisterScreen>
     super.dispose();
   }
 
+  void _showSnackbar(String message, Color backgroundColor) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        backgroundColor: backgroundColor,
+        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        elevation: 6,
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
@@ -324,31 +345,23 @@ class _RegisterScreenState extends State<RegisterScreen>
                         BlocConsumer<RegisterBloc, RegisterState>(
                           listener: (context, state) {
                             if (state is RegisterSuccess) {
-                              context.pushAndRemoveUntil(
-                                const LoginScreen(),
-                                (route) => false,
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(state.message),
-                                  backgroundColor: Colors.green,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
+                              // Tampilkan snackbar hijau untuk sukses
+                              _showSnackbar(state.message, Colors.green);
+
+                              // Navigasi ke halaman login setelah delay singkat
+                              Future.delayed(
+                                const Duration(milliseconds: 500),
+                                () {
+                                  context.pushAndRemoveUntil(
+                                    const LoginScreen(),
+                                    (route) => false,
+                                  );
+                                },
                               );
                             } else if (state is RegisterFailure) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(state.error),
-                                  backgroundColor: Colors.red,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
+                              // Tampilkan snackbar merah untuk gagal
+                              _showSnackbar(state.error, Colors.red);
+                              // Tetap di halaman register (tidak perlu navigasi)
                             }
                           },
                           builder: (context, state) {
